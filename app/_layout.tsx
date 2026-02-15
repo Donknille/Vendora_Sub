@@ -1,0 +1,94 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import React, { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { queryClient } from "@/lib/query-client";
+import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
+import { ThemeProvider } from "@/lib/ThemeContext";
+import { useTheme } from "@/lib/useTheme";
+import { LocalAuthProvider, useLocalAuth } from "@/lib/auth-local";
+import LockScreen from "./lock-screen";
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
+
+SplashScreen.preventAutoHideAsync();
+
+function RootLayoutNav() {
+  const theme = useTheme();
+  const { t } = useLanguage();
+  const { isAuthenticated, isLoading } = useLocalAuth();
+
+  if (isLoading) return null; // Or a splash screen
+  if (!isAuthenticated) return <LockScreen />;
+
+  return (
+    <Stack
+      screenOptions={{
+        headerBackTitle: "",
+        headerStyle: { backgroundColor: theme.background },
+        headerTintColor: theme.gold,
+        headerTitleStyle: { fontFamily: "Inter_600SemiBold", color: theme.text },
+        contentStyle: { backgroundColor: theme.background },
+      }}
+    >
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="order/new"
+        options={{ title: t.orders.newOrder, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="order/[id]"
+        options={{ title: t.orders.orderDetails }}
+      />
+      <Stack.Screen
+        name="market/new"
+        options={{ title: t.markets.newMarket, presentation: "modal" }}
+      />
+      <Stack.Screen
+        name="market/[id]"
+        options={{ title: t.markets.marketDetails }}
+      />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <LanguageProvider>
+            <LocalAuthProvider>
+              <GestureHandlerRootView>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </LocalAuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+}
