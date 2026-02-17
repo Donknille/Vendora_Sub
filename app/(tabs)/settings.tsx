@@ -76,7 +76,7 @@ export default function SettingsScreen() {
         a.click();
         URL.revokeObjectURL(url);
       } else {
-        const fileUri = FileSystem.documentDirectory + filename;
+        const fileUri = (FileSystem as any).documentDirectory + filename;
         await FileSystem.writeAsStringAsync(fileUri, data);
         await Share.share({
           url: fileUri,
@@ -312,6 +312,26 @@ export default function SettingsScreen() {
                 placeholder={t.settings.taxNotePlaceholder}
                 notSetLabel={t.settings.notSet}
               />
+              <ProfileField
+                label="Kleinunternehmer Text (Rechnung)"
+                value={profile.smallBusinessNote ?? "Gemäß § 19 UStG wird keine Umsatzsteuer berechnet."}
+                editing={editing}
+                onChange={(v) => setProfile({ ...profile, smallBusinessNote: v })}
+                theme={theme}
+                multiline
+                placeholder="Gemäß § 19 UStG wird keine Umsatzsteuer berechnet."
+                notSetLabel="Standard"
+              />
+              <ProfileField
+                label="Standard Versandkosten"
+                value={profile.defaultShippingCost?.toString() ?? "0"}
+                editing={editing}
+                onChange={(v) => setProfile({ ...profile, defaultShippingCost: parseFloat(v.replace(',', '.')) || 0 })}
+                theme={theme}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                notSetLabel="0.00 €"
+              />
             </View>
           </Card>
         </Animated.View>
@@ -401,7 +421,7 @@ function ProfileField({
   onChange: (v: string) => void;
   theme: any;
   multiline?: boolean;
-  keyboardType?: "email-address" | "phone-pad";
+  keyboardType?: "default" | "email-address" | "numeric" | "phone-pad" | "decimal-pad";
   placeholder?: string;
   notSetLabel: string;
 }) {

@@ -14,11 +14,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/useTheme";
 import { useLanguage } from "@/lib/LanguageContext";
-import { ordersStorage, OrderItem } from "@/lib/storage";
+import { profileStorage, ordersStorage, OrderItem } from "@/lib/storage";
 import { formatCurrency, parseAmount } from "@/lib/formatCurrency";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { DateInput } from "@/components/DateInput";
+import { useCallback } from "react";
 
 function toISODate(d: Date): string {
   const y = d.getFullYear();
@@ -35,10 +36,22 @@ export default function NewOrderScreen() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [orderDate, setOrderDate] = useState(toISODate(new Date()));
+  const [serviceDate, setServiceDate] = useState(toISODate(new Date()));
+  const [shippingCost, setShippingCost] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<{ id: string; name: string; quantity: number; priceText: string }[]>([
     { id: "1", name: "", quantity: 1, priceText: "" },
   ]);
+
+  useFocusEffect(
+    useCallback(() => {
+      profileStorage.get().then((profile) => {
+        if (profile.defaultShippingCost && !shippingCost) {
+          setShippingCost(profile.defaultShippingCost.toString().replace('.', ','));
+        }
+      });
+    }, [])
+  );
 
   const addItem = () => {
     setItems([
@@ -89,13 +102,16 @@ export default function NewOrderScreen() {
       status: "open",
       notes: notes.trim(),
       orderDate: orderDate,
+      serviceDate: serviceDate,
+      shippingCost: parseAmount(shippingCost),
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.back();
   };
 
-  const total = items.reduce((sum, item) => sum + parseAmount(item.priceText) * item.quantity, 0);
+  const itemsTotal = items.reduce((sum, item) => sum + parseAmount(item.priceText) * item.quantity, 0);
+  const total = itemsTotal + parseAmount(shippingCost);
 
   return (
     <KeyboardAvoidingView
@@ -140,6 +156,14 @@ export default function NewOrderScreen() {
               value={orderDate}
               onChange={setOrderDate}
               placeholder={t.orders.orderDatePlaceholder}
+            />
+          </View>
+          <View style={styles.dateRow}>
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Leistungsdatum / -zeitraum</Text>
+            <DateInput
+              value={serviceDate}
+              onChange={setServiceDate}
+              placeholder="YYYY-MM-DD"
             />
           </View>
         </View>
@@ -196,6 +220,18 @@ export default function NewOrderScreen() {
               </View>
             </View>
           ))}
+
+          <View style={styles.itemCard}>
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Versandkosten</Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+              value={shippingCost}
+              onChangeText={setShippingCost}
+              placeholder="0,00"
+              placeholderTextColor={theme.textSecondary}
+              keyboardType="decimal-pad"
+            />
+          </View>
         </View>
 
         <View style={styles.section}>

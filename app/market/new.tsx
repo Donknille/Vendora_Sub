@@ -29,12 +29,36 @@ export default function NewMarketScreen() {
   const [standFee, setStandFee] = useState("");
   const [travelCost, setTravelCost] = useState("");
   const [notes, setNotes] = useState("");
+  const [quickItems, setQuickItems] = useState<{ name: string; priceText: string }[]>([{ name: "", priceText: "" }]);
+
+  const addQuickItem = () => {
+    setQuickItems([...quickItems, { name: "", priceText: "" }]);
+  };
+
+  const updateQuickItem = (index: number, field: "name" | "price", value: string) => {
+    const updated = [...quickItems];
+    if (field === "name") updated[index].name = value;
+    else updated[index].priceText = value;
+    setQuickItems(updated);
+  };
+
+  const removeQuickItem = (index: number) => {
+    if (quickItems.length <= 1) {
+      setQuickItems([{ name: "", priceText: "" }]);
+      return;
+    }
+    setQuickItems(quickItems.filter((_, i) => i !== index));
+  };
 
   const saveMarket = async () => {
     if (!name.trim()) {
       Alert.alert(t.orders.missingInfo, t.markets.marketName);
       return;
     }
+
+    const validQuickItems = quickItems
+      .filter(i => i.name.trim() && i.priceText.trim())
+      .map(i => ({ name: i.name.trim(), price: parseAmount(i.priceText) }));
 
     await marketsStorage.add({
       name: name.trim(),
@@ -43,6 +67,7 @@ export default function NewMarketScreen() {
       standFee: parseAmount(standFee),
       travelCost: parseAmount(travelCost),
       notes: notes.trim(),
+      quickItems: validQuickItems,
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -123,6 +148,41 @@ export default function NewMarketScreen() {
             placeholderTextColor={theme.textSecondary}
             multiline
           />
+        </View>
+
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Schnellwahltasten</Text>
+            <Pressable onPress={addQuickItem}>
+              <Ionicons name="add-circle" size={24} color={theme.gold} />
+            </Pressable>
+          </View>
+          <Text style={{ fontSize: 13, color: theme.textSecondary, marginBottom: 8 }}>
+            Lege Artikel fest, die du auf dem Markt häufig verkaufst, um sie später mit einem Klick zu erfassen.
+          </Text>
+
+          {quickItems.map((item, index) => (
+            <View key={index} style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+              <TextInput
+                style={[styles.input, { flex: 2, backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                value={item.name}
+                onChangeText={(v) => updateQuickItem(index, "name", v)}
+                placeholder="Artikelname (z.B. Tasse)"
+                placeholderTextColor={theme.textSecondary}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1, backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }]}
+                value={item.priceText}
+                onChangeText={(v) => updateQuickItem(index, "price", v)}
+                placeholder="Preis"
+                placeholderTextColor={theme.textSecondary}
+                keyboardType="decimal-pad"
+              />
+              <Pressable onPress={() => removeQuickItem(index)} style={{ justifyContent: 'center' }}>
+                <Ionicons name="trash-outline" size={20} color={theme.error} />
+              </Pressable>
+            </View>
+          ))}
         </View>
 
         <Pressable

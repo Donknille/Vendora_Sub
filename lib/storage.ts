@@ -20,6 +20,8 @@ export interface Order {
   invoiceNumber: string;
   notes: string;
   orderDate: string;
+  serviceDate?: string;
+  shippingCost?: number;
   createdAt: string;
   updatedAt: string;
   total: number;
@@ -41,6 +43,7 @@ export interface MarketEvent {
   travelCost: number;
   notes: string;
   createdAt: string;
+  quickItems?: { name: string; price: number }[];
 }
 
 export interface MarketSale {
@@ -68,6 +71,8 @@ export interface CompanyProfile {
   email: string;
   phone: string;
   taxNote: string;
+  smallBusinessNote?: string;
+  defaultShippingCost?: number;
 }
 
 export interface AppSettings {

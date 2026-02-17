@@ -125,10 +125,15 @@ export default function OrderDetailScreen() {
           <Card>
             <View style={styles.headerRow}>
               <View>
-                <Text style={[styles.invoiceNum, { color: theme.gold }]}>
-                  {t.orders.invoice} #{order.invoiceNumber}
-                </Text>
-                <Text style={[styles.customerName, { color: theme.text }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={[styles.invoiceNum, { color: theme.gold, marginBottom: 0 }]}>
+                    {t.orders.invoice} #{order.invoiceNumber}
+                  </Text>
+                  <Pressable onPress={() => router.push(`/order/edit/${order.id}`)} hitSlop={10}>
+                    <Ionicons name="create-outline" size={22} color={theme.textSecondary} />
+                  </Pressable>
+                </View>
+                <Text style={[styles.customerName, { color: theme.text, marginTop: 4 }]}>
                   {order.customerName}
                 </Text>
               </View>
@@ -185,10 +190,24 @@ export default function OrderDetailScreen() {
               </View>
             ))}
             <View style={[styles.totalRow, { borderTopColor: theme.border }]}>
-              <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>{t.orders.total}</Text>
-              <Text style={[styles.totalValue, { color: theme.gold }]}>
-                {formatCurrency(order.total)}
-              </Text>
+              {order.shippingCost ? (
+                <>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 4 }}>
+                    <Text style={[styles.totalLabel, { color: theme.textSecondary, fontSize: 13, fontWeight: 'normal' }]}>Zwischensumme</Text>
+                    <Text style={[styles.totalValue, { color: theme.text, fontSize: 14, fontWeight: 'normal' }]}>{formatCurrency(order.total - order.shippingCost)}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 12 }}>
+                    <Text style={[styles.totalLabel, { color: theme.textSecondary, fontSize: 13, fontWeight: 'normal' }]}>Versandkosten</Text>
+                    <Text style={[styles.totalValue, { color: theme.text, fontSize: 14, fontWeight: 'normal' }]}>{formatCurrency(order.shippingCost)}</Text>
+                  </View>
+                </>
+              ) : null}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                <Text style={[styles.totalLabel, { color: theme.textSecondary }]}>{t.orders.total}</Text>
+                <Text style={[styles.totalValue, { color: theme.gold }]}>
+                  {formatCurrency(order.total)}
+                </Text>
+              </View>
             </View>
           </Card>
         </Animated.View>

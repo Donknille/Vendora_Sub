@@ -226,7 +226,8 @@ export function generateInvoiceHtml(
           <h2>${escapeHtml(t.orders.invoiceTitle)}</h2>
           <div class="invoice-meta">
             ${escapeHtml(t.orders.invoiceNumber)} <span>${escapeHtml(order.invoiceNumber)}</span><br/>
-            ${escapeHtml(t.orders.invoiceDate)} <span>${dateStr}</span>
+            ${escapeHtml(t.orders.invoiceDate)} <span>${dateStr}</span><br/>
+            ${order.serviceDate ? `Leistungsdatum: <span>${new Date(order.serviceDate).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" })}</span>` : ""}
           </div>
         </div>
       </div>
@@ -256,6 +257,16 @@ export function generateInvoiceHtml(
         </tbody>
       </table>
 
+      ${order.shippingCost ? `
+      <div class="total-row" style="margin-bottom: 4px;">
+        <span class="total-label" style="font-weight: normal;">Zwischensumme:</span>
+        <span class="total-value" style="font-weight: normal;">${formatEur(order.total - order.shippingCost)}</span>
+      </div>
+      <div class="total-row" style="margin-bottom: 4px;">
+        <span class="total-label" style="font-weight: normal;">Versandkosten:</span>
+        <span class="total-value" style="font-weight: normal;">${formatEur(order.shippingCost)}</span>
+      </div>` : ""}
+
       <div class="total-row">
         <span class="total-label">${escapeHtml(t.orders.invoiceTotal)}:</span>
         <span class="total-value">${formatEur(order.total)}</span>
@@ -264,7 +275,7 @@ export function generateInvoiceHtml(
     </div>
 
     <div class="footer-section">
-      ${profile.taxNote ? `<div class="tax-note">${escapeHtml(profile.taxNote)}</div>` : ""}
+      ${profile.smallBusinessNote ? `<div class="tax-note">${escapeHtml(profile.smallBusinessNote)}</div>` : (profile.taxNote ? `<div class="tax-note">${escapeHtml(profile.taxNote)}</div>` : "")}
       <div class="thank-you">${escapeHtml(thankYouText)}</div>
     </div>
   </div>
