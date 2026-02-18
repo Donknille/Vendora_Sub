@@ -44,6 +44,7 @@ export interface MarketEvent {
   notes: string;
   createdAt: string;
   quickItems?: { name: string; price: number }[];
+  status?: "open" | "closed";
 }
 
 export interface MarketSale {

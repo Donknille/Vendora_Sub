@@ -43,10 +43,12 @@ export default function SettingsScreen() {
     taxNote: "",
   });
   const [editing, setEditing] = useState(false);
+  const [shippingCostInput, setShippingCostInput] = useState("");
 
   const loadProfile = useCallback(async () => {
     const data = await profileStorage.get();
     setProfile(data);
+    setShippingCostInput(data.defaultShippingCost?.toString().replace('.', ',') ?? "");
   }, []);
 
   useFocusEffect(
@@ -56,7 +58,10 @@ export default function SettingsScreen() {
   );
 
   const saveProfile = async () => {
-    await profileStorage.save(profile);
+    const cost = parseFloat(shippingCostInput.replace(',', '.')) || 0;
+    const updatedProfile = { ...profile, defaultShippingCost: cost };
+    await profileStorage.save(updatedProfile);
+    setProfile(updatedProfile);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setEditing(false);
   };
@@ -324,13 +329,13 @@ export default function SettingsScreen() {
               />
               <ProfileField
                 label="Standard Versandkosten"
-                value={profile.defaultShippingCost?.toString() ?? "0"}
+                value={editing ? shippingCostInput : (profile.defaultShippingCost?.toString().replace('.', ',') ?? "0")}
                 editing={editing}
-                onChange={(v) => setProfile({ ...profile, defaultShippingCost: parseFloat(v.replace(',', '.')) || 0 })}
+                onChange={setShippingCostInput}
                 theme={theme}
                 keyboardType="decimal-pad"
-                placeholder="0.00"
-                notSetLabel="0.00 €"
+                placeholder="0,00"
+                notSetLabel="0,00 €"
               />
             </View>
           </Card>

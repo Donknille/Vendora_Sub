@@ -257,15 +257,14 @@ export function generateInvoiceHtml(
         </tbody>
       </table>
 
-      ${order.shippingCost ? `
       <div class="total-row" style="margin-bottom: 4px;">
         <span class="total-label" style="font-weight: normal;">Zwischensumme:</span>
-        <span class="total-value" style="font-weight: normal;">${formatEur(order.total - order.shippingCost)}</span>
+        <span class="total-value" style="font-weight: normal;">${formatEur(order.total - (order.shippingCost || 0))}</span>
       </div>
       <div class="total-row" style="margin-bottom: 4px;">
         <span class="total-label" style="font-weight: normal;">Versandkosten:</span>
-        <span class="total-value" style="font-weight: normal;">${formatEur(order.shippingCost)}</span>
-      </div>` : ""}
+        <span class="total-value" style="font-weight: normal;">${formatEur(order.shippingCost || 0)}</span>
+      </div>
 
       <div class="total-row">
         <span class="total-label">${escapeHtml(t.orders.invoiceTotal)}:</span>
