@@ -2,7 +2,7 @@
   "expo": {
     "name": "Vendora",
     "slug": "vendora",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "vendora",
@@ -19,7 +19,7 @@
     },
     "android": {
       "package": "com.vendora.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "backgroundColor": "#0D0D0D",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
