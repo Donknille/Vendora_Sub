@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Pressable,
   Image,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,6 +31,9 @@ import {
 import { useFocusEffect } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import { generateFinancialReportHtml } from "@/lib/reportTemplate";
 
 interface MonthlyData {
   month: string;
@@ -51,6 +56,7 @@ export default function DashboardScreen() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
 
   const loadData = useCallback(async () => {
     const [o, m, ms, e] = await Promise.all([
@@ -190,6 +196,63 @@ export default function DashboardScreen() {
   const monthlyData = getMonthlyData();
   const maxValue = Math.max(...monthlyData.map((d) => Math.max(d.revenue, d.expenses)), 1);
 
+  const exportReport = async () => {
+    setGeneratingReport(true);
+    try {
+      // Pass the fully assembled data to the HTML template generator
+      const html = generateFinancialReportHtml(
+        selectedYear,
+        totalRevenue,
+        totalExpenses,
+        netProfit,
+        monthlyData,
+        t,
+      );
+
+      if (Platform.OS === "web") {
+        // Fallback for Web to avoid printing the app UI instead of the document
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "absolute";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "none";
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+          doc.open();
+          doc.write(html);
+          doc.close();
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        }
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
+      } else {
+        const { uri } = await Print.printToFileAsync({
+          html,
+          base64: false,
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(uri, {
+            mimeType: "application/pdf",
+            dialogTitle: t.dashboard.shareReport,
+            UTI: "com.adobe.pdf",
+          });
+        } else {
+          Alert.alert(t.dashboard.shareReport, "PDF Export: " + uri);
+        }
+      }
+    } catch (e) {
+      console.error("Report generation error:", e);
+      Alert.alert(t.dashboard.reportError);
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
@@ -210,6 +273,22 @@ export default function DashboardScreen() {
               <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t.dashboard.overview}</Text>
               <Text style={[styles.heading, { color: theme.text }]}>{t.dashboard.dashboard}</Text>
             </View>
+            <Pressable
+              onPress={exportReport}
+              disabled={generatingReport}
+              style={({ pressed }) => [
+                styles.exportBtn,
+                { backgroundColor: theme.card, borderColor: theme.border },
+                pressed && { opacity: 0.7 },
+                generatingReport && { opacity: 0.5 },
+              ]}
+            >
+              {generatingReport ? (
+                <ActivityIndicator size="small" color={theme.text} />
+              ) : (
+                <Ionicons name="document-text-outline" size={24} color={theme.text} />
+              )}
+            </Pressable>
           </View>
 
           <ScrollView
@@ -384,6 +463,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { padding: 20, gap: 16 },
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  exportBtn: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", borderWidth: 1 },
   greeting: { fontSize: 14, fontFamily: "Inter_400Regular", marginBottom: 2 },
   heading: { fontSize: 28, fontFamily: "Inter_700Bold", marginBottom: 12 },
   yearScroll: { gap: 8, paddingBottom: 4 },

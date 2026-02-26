@@ -9,7 +9,7 @@ import { queryClient } from "@/lib/query-client";
 import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
 import { ThemeProvider } from "@/lib/ThemeContext";
 import { useTheme } from "@/lib/useTheme";
-import { LocalAuthProvider, useLocalAuth } from "@/lib/auth-local";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import LockScreen from "./lock-screen";
 import {
   useFonts,
@@ -23,7 +23,7 @@ SplashScreen.preventAutoHideAsync();
 function RootLayoutNav() {
   const theme = useTheme();
   const { t } = useLanguage();
-  const { isAuthenticated, isLoading } = useLocalAuth();
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) return null; // Or a splash screen
   if (!isAuthenticated) return <LockScreen />;
@@ -59,6 +59,8 @@ function RootLayoutNav() {
   );
 }
 
+import { SubscriptionProvider } from "@/lib/subscription";
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
@@ -79,13 +81,15 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <LanguageProvider>
-            <LocalAuthProvider>
-              <GestureHandlerRootView>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </LocalAuthProvider>
+            <AuthProvider>
+              <SubscriptionProvider>
+                <GestureHandlerRootView>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </SubscriptionProvider>
+            </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>

@@ -66,7 +66,23 @@ export default function OrderDetailScreen() {
       const html = generateInvoiceHtml(order, profile, t);
 
       if (Platform.OS === "web") {
-        await Print.printAsync({ html });
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "absolute";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "none";
+        document.body.appendChild(iframe);
+        const doc = iframe.contentWindow?.document;
+        if (doc) {
+          doc.open();
+          doc.write(html);
+          doc.close();
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        }
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+        }, 1000);
       } else {
         const { uri } = await Print.printToFileAsync({
           html,
