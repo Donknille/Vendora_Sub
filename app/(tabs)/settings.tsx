@@ -29,11 +29,13 @@ import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useAuth } from "@/lib/auth";
 
 export default function SettingsScreen() {
   const theme = useTheme();
   const { themeMode, setThemeMode } = useThemeContext();
   const { t, language, setLanguage } = useLanguage();
+  const { logout } = useAuth();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<CompanyProfile>({
     name: "",
@@ -129,6 +131,18 @@ export default function SettingsScreen() {
           Alert.alert(t.settings.resetComplete, t.settings.resetSuccess);
         });
       },
+    );
+  };
+
+  const handleLogout = () => {
+    confirmAction(
+      "Abmelden",
+      "Möchtest du dich wirklich abmelden? Du musst dich danach wieder mit Google anmelden.",
+      "Abbrechen",
+      "Abmelden",
+      () => {
+        logout();
+      }
     );
   };
 
@@ -393,17 +407,28 @@ export default function SettingsScreen() {
           <Card>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIcon, { backgroundColor: theme.gold + "15" }]}>
-                <Ionicons name="lock-closed-outline" size={18} color={theme.gold} />
+                <Ionicons name="cloud-outline" size={18} color={theme.gold} />
               </View>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.settings.privacy}</Text>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Account</Text>
             </View>
-            <Text style={[styles.privacyText, { color: theme.textSecondary }]}>
-              {t.settings.privacyText}
+            <Text style={[styles.privacyText, { color: theme.textSecondary, marginBottom: 16 }]}>
+              Du bist angemeldet und deine Daten werden sicher in der Vendora Cloud gespeichert.
             </Text>
+
+            <View style={styles.actionList}>
+              <Pressable
+                onPress={handleLogout}
+                style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.7 }]}
+              >
+                <Ionicons name="log-out-outline" size={20} color={theme.error} />
+                <Text style={[styles.actionText, { color: theme.error }]}>Abmelden</Text>
+                <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+              </Pressable>
+            </View>
           </Card>
         </Animated.View>
 
-        <Text style={[styles.version, { color: theme.textSecondary }]}>Vendora v1.0.0</Text>
+        <Text style={[styles.version, { color: theme.textSecondary }]}>Vendora v1.1.1 (Cloud)</Text>
       </ScrollView>
     </View>
   );

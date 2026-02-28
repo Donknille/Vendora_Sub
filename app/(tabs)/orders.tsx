@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/useTheme";
 import { useLanguage } from "@/lib/LanguageContext";
+import { useSubscription } from "@/lib/subscription";
 import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
@@ -24,6 +25,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 export default function OrdersScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
+  const { canCreateNewItems } = useSubscription();
   const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<Order[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -85,7 +87,11 @@ export default function OrdersScreen() {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push("/order/new");
+            if (canCreateNewItems) {
+              router.push("/order/new");
+            } else {
+              router.push("/paywall");
+            }
           }}
           style={({ pressed }) => [
             styles.addBtn,

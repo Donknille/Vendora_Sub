@@ -20,12 +20,16 @@ import {
 
 SplashScreen.preventAutoHideAsync();
 
+import { useSubscription } from "@/lib/subscription";
+
 function RootLayoutNav() {
   const theme = useTheme();
   const { t } = useLanguage();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isSubscribed, isLoading: isSubLoading } = useSubscription();
 
-  if (isLoading) return null; // Or a splash screen
+  if (isAuthLoading || (isAuthenticated && isSubLoading)) return null; // Or a splash screen
+
   if (!isAuthenticated) return <LockScreen />;
 
   return (
@@ -39,6 +43,7 @@ function RootLayoutNav() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="paywall" options={{ presentation: "modal", headerShown: false }} />
       <Stack.Screen
         name="order/new"
         options={{ title: t.orders.newOrder, presentation: "modal" }}

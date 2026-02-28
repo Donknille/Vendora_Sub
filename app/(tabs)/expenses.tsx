@@ -15,12 +15,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/useTheme";
 import { useLanguage } from "@/lib/LanguageContext";
+import { useSubscription } from "@/lib/subscription";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { formatCurrency, parseAmount } from "@/lib/formatCurrency";
 import { expensesStorage, Expense } from "@/lib/storage";
 import { confirmAction } from "@/lib/confirmAction";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { DateInput } from "@/components/DateInput";
@@ -47,6 +48,7 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 export default function ExpensesScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
+  const { canCreateNewItems } = useSubscription();
   const insets = useSafeAreaInsets();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -155,7 +157,11 @@ export default function ExpensesScreen() {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setShowModal(true);
+            if (canCreateNewItems) {
+              setShowModal(true);
+            } else {
+              router.push("/paywall");
+            }
           }}
           style={({ pressed }) => [
             styles.addBtn,

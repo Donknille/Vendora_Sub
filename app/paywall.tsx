@@ -1,3 +1,4 @@
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,10 +8,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 export default function PaywallScreen() {
-    const { currentOffering, purchasePackage, restorePurchases, isSubscribed } = useSubscription();
+    const { currentOffering, purchasePackage, restorePurchases, isSubscribed, bypassSubscription } = useSubscription();
     const theme = useTheme();
     const router = useRouter();
     const [isPurchasing, setIsPurchasing] = useState(false);
+
+    const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
     if (isSubscribed) {
         return (
@@ -38,7 +41,6 @@ export default function PaywallScreen() {
         setIsPurchasing(false);
         if (success) {
             Alert.alert("Success", "Welcome to Vendora Pro!");
-            router.replace("/");
         }
     };
 
@@ -46,7 +48,6 @@ export default function PaywallScreen() {
         const success = await restorePurchases();
         if (success) {
             Alert.alert("Restored", "Your purchases have been restored.");
-            router.replace("/");
         } else {
             Alert.alert("Notice", "No active subscriptions found to restore.");
         }
@@ -98,6 +99,17 @@ export default function PaywallScreen() {
                 <TouchableOpacity onPress={handleRestore} style={styles.restoreBtn}>
                     <Text style={[styles.restoreText, { color: theme.textSecondary }]}>Restore Purchases</Text>
                 </TouchableOpacity>
+
+                {isExpoGo && (
+                    <TouchableOpacity
+                        onPress={bypassSubscription}
+                        style={[styles.restoreBtn, { marginTop: 10, opacity: 0.5 }]}
+                    >
+                        <Text style={[styles.restoreText, { color: theme.error, fontSize: 12 }]}>
+                            [Dev Mode] Bypass Paywall
+                        </Text>
+                    </TouchableOpacity>
+                )}
             </ScrollView>
         </SafeAreaView>
     );

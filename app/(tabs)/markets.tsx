@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/useTheme";
 import { useLanguage } from "@/lib/LanguageContext";
+import { useSubscription } from "@/lib/subscription";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -22,6 +23,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 export default function MarketsScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
+  const { canCreateNewItems } = useSubscription();
   const insets = useSafeAreaInsets();
   const [markets, setMarkets] = useState<MarketEvent[]>([]);
   const [salesMap, setSalesMap] = useState<Record<string, MarketSale[]>>({});
@@ -111,7 +113,11 @@ export default function MarketsScreen() {
         <Pressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push("/market/new");
+            if (canCreateNewItems) {
+              router.push("/market/new");
+            } else {
+              router.push("/paywall");
+            }
           }}
           style={({ pressed }) => [
             styles.addBtn,
