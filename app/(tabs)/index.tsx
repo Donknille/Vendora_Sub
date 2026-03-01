@@ -34,6 +34,7 @@ import * as Haptics from "expo-haptics";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { generateFinancialReportHtml } from "@/lib/reportTemplate";
+import { useSubscription } from "@/lib/subscription";
 
 interface MonthlyData {
   month: string;
@@ -49,6 +50,7 @@ export default function DashboardScreen() {
   const theme = useTheme();
   const { isDark } = useThemeContext();
   const { t } = useLanguage();
+  const { isSubscribed } = useSubscription();
   const insets = useSafeAreaInsets();
   const [orders, setOrders] = useState<Order[]>([]);
   const [markets, setMarkets] = useState<MarketEvent[]>([]);
@@ -270,7 +272,14 @@ export default function DashboardScreen() {
         <Animated.View entering={FadeInDown.duration(400).delay(0)}>
           <View style={styles.headerRow}>
             <View>
-              <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t.dashboard.overview}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Text style={[styles.greeting, { color: theme.textSecondary }]}>{t.dashboard.overview}</Text>
+                {isSubscribed && (
+                  <View style={{ backgroundColor: theme.gold + "20", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: theme.gold }}>
+                    <Text style={{ color: theme.gold, fontSize: 10, fontFamily: "Inter_700Bold" }}>PRO</Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.heading, { color: theme.text }]}>{t.dashboard.dashboard}</Text>
             </View>
             <Pressable

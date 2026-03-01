@@ -27,7 +27,7 @@ export type User = typeof users.$inferSelect;
 
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey(), // Using client-generated ID for offline-first ease
-  user_id: text("user_id").notNull().references(() => users.supabase_id),
+  user_id: text("user_id").notNull().references(() => users.supabase_id, { onDelete: 'cascade' }),
   customer_name: text("customer_name").notNull(),
   customer_email: text("customer_email"),
   customer_address: text("customer_address"),
@@ -44,7 +44,7 @@ export const orders = pgTable("orders", {
 
 export const order_items = pgTable("order_items", {
   id: varchar("id").primaryKey(),
-  user_id: text("user_id").notNull().references(() => users.supabase_id),
+  user_id: text("user_id").notNull().references(() => users.supabase_id, { onDelete: 'cascade' }),
   order_id: varchar("order_id").notNull().references(() => orders.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   quantity: text("quantity").notNull(), // text to avoid precision issues in simple setup
@@ -53,7 +53,7 @@ export const order_items = pgTable("order_items", {
 
 export const markets = pgTable("markets", {
   id: varchar("id").primaryKey(),
-  user_id: text("user_id").notNull().references(() => users.supabase_id),
+  user_id: text("user_id").notNull().references(() => users.supabase_id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
   date: text("date").notNull(),
   location: text("location"),
@@ -66,7 +66,7 @@ export const markets = pgTable("markets", {
 
 export const market_sales = pgTable("market_sales", {
   id: varchar("id").primaryKey(),
-  user_id: text("user_id").notNull().references(() => users.supabase_id),
+  user_id: text("user_id").notNull().references(() => users.supabase_id, { onDelete: 'cascade' }),
   market_id: varchar("market_id").notNull().references(() => markets.id, { onDelete: 'cascade' }),
   description: text("description").notNull(),
   amount: text("amount").notNull(),
@@ -76,7 +76,7 @@ export const market_sales = pgTable("market_sales", {
 
 export const expenses = pgTable("expenses", {
   id: varchar("id").primaryKey(),
-  user_id: text("user_id").notNull().references(() => users.supabase_id),
+  user_id: text("user_id").notNull().references(() => users.supabase_id, { onDelete: 'cascade' }),
   description: text("description").notNull(),
   amount: text("amount").notNull(),
   category: text("category").notNull(),

@@ -24,18 +24,21 @@ import {
   importAllData,
   clearAllData,
 } from "@/lib/storage";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
+import { useSubscription } from "@/lib/subscription";
 
 export default function SettingsScreen() {
   const theme = useTheme();
   const { themeMode, setThemeMode } = useThemeContext();
   const { t, language, setLanguage } = useLanguage();
   const { logout } = useAuth();
+  const { isSubscribed, daysUntilTrialEnds } = useSubscription();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<CompanyProfile>({
     name: "",
@@ -146,6 +149,29 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    confirmAction(
+      "Konto unwiderruflich löschen",
+      "Bist du sicher? Dies wird deinen Account und ALLE deine gespeicherten Daten (Rechnungen, Kunden, etc.) dauerhaft löschen. Dieser Vorgang kann NICHT rückgängig gemacht werden.",
+      "Abbrechen",
+      "Konto löschen",
+      async () => {
+        try {
+          const { error } = await supabase.rpc('delete_user_account');
+          if (error) throw error;
+
+          await clearAllData();
+          logout();
+          setTimeout(() => {
+            Alert.alert("Konto gelöscht", "Dein Account und alle dazugehörigen Daten wurden erfolgreich gelöscht.");
+          }, 500);
+        } catch (error: any) {
+          Alert.alert("Fehler", "Beim Löschen deines Accounts ist ein Fehler aufgetreten: " + error.message);
+        }
+      }
+    );
+  };
+
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
@@ -160,6 +186,47 @@ export default function SettingsScreen() {
         <Text style={[styles.heading, { color: theme.text }]}>{t.settings.title}</Text>
 
         <Animated.View entering={FadeInDown.duration(400).delay(0)}>
+          <Card style={{ backgroundColor: isSubscribed ? theme.gold + "15" : theme.card, borderColor: isSubscribed ? theme.gold : theme.border, borderWidth: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={[styles.sectionIcon, { backgroundColor: isSubscribed ? theme.gold + "20" : theme.border }]}>
+                <Ionicons name="star" size={18} color={isSubscribed ? theme.gold : theme.textSecondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 18, fontFamily: "Inter_700Bold", color: isSubscribed ? theme.gold : theme.text }}>
+                  {isSubscribed ? "Vendora Pro" : daysUntilTrialEnds > 0 ? "Vendora Testversion" : "Vendora Free"}
+                </Text>
+                <Text style={{ fontSize: 13, fontFamily: "Inter_400Regular", color: theme.textSecondary, marginTop: 2 }}>
+                  {isSubscribed
+                    ? "Du hast vollen Zugriff auf alle Cloud-Features."
+                    : daysUntilTrialEnds > 0
+                      ? `Deine kostenlose Testphase endet in ${daysUntilTrialEnds} Tag${daysUntilTrialEnds === 1 ? "" : "en"}.`
+                      : "Dein Abo ist abgelaufen. Du kannst keine neuen Daten mehr anlegen."}
+                </Text>
+              </View>
+            </View>
+            {!isSubscribed && (
+              <Pressable
+                onPress={() => router.push("/paywall")}
+                style={({ pressed }) => [
+                  {
+                    marginTop: 16,
+                    backgroundColor: theme.gold,
+                    paddingVertical: 12,
+                    borderRadius: 10,
+                    alignItems: "center",
+                  },
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                <Text style={{ color: "#0D0D0D", fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                  Jetzt Upgraden
+                </Text>
+              </Pressable>
+            )}
+          </Card>
+        </Animated.View>
+
+        <Animated.View entering={FadeInDown.duration(400).delay(50)}>
           <Card>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIcon, { backgroundColor: theme.gold + "15" }]}>
@@ -208,7 +275,7 @@ export default function SettingsScreen() {
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(50)}>
+        <Animated.View entering={FadeInDown.duration(400).delay(100)}>
           <Card>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIcon, { backgroundColor: theme.gold + "15" }]}>
@@ -264,7 +331,7 @@ export default function SettingsScreen() {
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(150)}>
+        <Animated.View entering={FadeInDown.duration(400).delay(200)}>
           <Card>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIcon, { backgroundColor: theme.gold + "15" }]}>
@@ -355,7 +422,7 @@ export default function SettingsScreen() {
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(250)}>
+        <Animated.View entering={FadeInDown.duration(400).delay(300)}>
           <Card>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIcon, { backgroundColor: theme.info + "20" }]}>
@@ -403,7 +470,7 @@ export default function SettingsScreen() {
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.duration(400).delay(350)}>
+        <Animated.View entering={FadeInDown.duration(400).delay(400)}>
           <Card>
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionIcon, { backgroundColor: theme.gold + "15" }]}>
@@ -418,10 +485,19 @@ export default function SettingsScreen() {
             <View style={styles.actionList}>
               <Pressable
                 onPress={handleLogout}
+                style={({ pressed }) => [styles.actionRow, { borderBottomColor: theme.border }, pressed && { opacity: 0.7 }]}
+              >
+                <Ionicons name="log-out-outline" size={20} color={theme.text} />
+                <Text style={[styles.actionText, { color: theme.text }]}>Abmelden</Text>
+                <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+              </Pressable>
+
+              <Pressable
+                onPress={handleDeleteAccount}
                 style={({ pressed }) => [styles.actionRow, pressed && { opacity: 0.7 }]}
               >
-                <Ionicons name="log-out-outline" size={20} color={theme.error} />
-                <Text style={[styles.actionText, { color: theme.error }]}>Abmelden</Text>
+                <Ionicons name="warning-outline" size={20} color={theme.error} />
+                <Text style={[styles.actionText, { color: theme.error, fontFamily: "Inter_600SemiBold" }]}>Konto unwiderruflich löschen</Text>
                 <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
               </Pressable>
             </View>

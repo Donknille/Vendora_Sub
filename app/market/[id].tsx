@@ -62,6 +62,31 @@ export default function MarketDetailScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
+  const copyMarket = async () => {
+    if (!market) return;
+    confirmAction(
+      "Markt duplizieren?",
+      "Möchtest du eine Kopie dieses Marktes anlegen? Dabei werden Name und Schnellwahl-Artikel übernommen. Verkäufe, Standort und Gebühren werden auf 0 gesetzt.",
+      "Abbrechen",
+      "Kopieren",
+      async () => {
+        const newMarket = await marketsStorage.add({
+          name: `${market.name} (Kopie)`,
+          date: new Date().toISOString(),
+          location: "",
+          standFee: 0,
+          travelCost: 0,
+          notes: "",
+          status: "open",
+          quickItems: market.quickItems ? [...market.quickItems] : [],
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Replace current screen with the new market to avoid huge nav stacks or pushing over existing context
+        router.replace({ pathname: "/market/[id]", params: { id: newMarket.id } });
+      }
+    );
+  };
+
   const addSale = async () => {
     if (!saleDesc.trim() || !saleAmount.trim()) return;
     await marketSalesStorage.add({
@@ -209,9 +234,12 @@ export default function MarketDetailScreen() {
                   <StatusBadge status={isClosed ? "closed" : "open"} label={isClosed ? "Geschlossen" : "Geöffnet"} color={isClosed ? theme.textSecondary : theme.success} />
                 </View>
               </View>
-              <View style={{ gap: 8 }}>
+              <View style={{ gap: 8, flexDirection: "row", alignItems: "center" }}>
                 <Pressable onPress={() => router.push(`/market/edit/${id}`)} style={{ padding: 8 }}>
                   <Ionicons name="create-outline" size={22} color={theme.textSecondary} />
+                </Pressable>
+                <Pressable onPress={copyMarket} style={{ padding: 8 }}>
+                  <Ionicons name="copy-outline" size={22} color={theme.textSecondary} />
                 </Pressable>
                 <Pressable onPress={toggleMarketStatus} style={{ padding: 8 }}>
                   <Ionicons name={isClosed ? "lock-closed" : "lock-open-outline"} size={22} color={theme.textSecondary} />

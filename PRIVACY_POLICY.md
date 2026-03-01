@@ -1,41 +1,50 @@
 # Datenschutzerklärung für Vendora
 
-**Stand:** 18.02.2026
+**Stand:** 01.03.2026
 
-Diese Datenschutzerklärung erklärt, wie die App **Vendora** ("wir", "uns" oder "unser") Informationen sammelt, verwendet und weitergibt, wenn Sie unsere mobile Anwendung nutzen.
+Diese Datenschutzerklärung klärt Sie über die Art, den Umfang und Zwecke der Erhebung und Verwendung personenbezogener Daten durch die App **Vendora** ("wir", "uns" oder "unser") auf.
 
-## 1. Welche Daten wir sammeln
+## 1. Wer wir sind und Rolle nach DSGVO
+**Digital Flow Solutions**
+E-Mail: digitalflowsolutions2025@gmail.com
 
-### Kamerazugriff
-Unsere App benötigt Zugriff auf die Kamera Ihres Geräts.
-**Grund:** Der Zugriff ist erforderlich, damit Sie Fotos von Ihren Produkten, Materialien oder Belegen aufnehmen und direkt in der App speichern können. Diese Bilder werden verwendet, um Ihre Artikel visuell zu verwalten oder Rechnungen zu erstellen.
+**Ihre Rolle als Nutzer (Verantwortlicher):** 
+Wenn Sie als Händler Vendora nutzen und Daten Ihrer Kunden (z.B. Namen, Adressen auf Rechnungen) in der App erfassen, sind **Sie** der datenschutzrechtlich Verantwortliche im Sinne von Art. 4 Nr. 7 DSGVO für diese Kundendaten. Sie müssen sicherstellen, dass Sie eine rechtliche Grundlage (z.B. Vertragserfüllung oder Einwilligung) zur Verarbeitung dieser Daten haben.
 
-### Bilder und Dateien
-Wir greifen auf Bilder zu, die Sie in der App auswählen oder aufnehmen.
-**Speicherung:** Alle aufgenommenen oder ausgewählten Bilder werden **lokal auf Ihrem Gerät** gespeichert. Wir laden diese Bilder nicht auf externe Server hoch, es sei denn, Sie nutzen explizit eine Backup-Funktion (falls verfügbar) oder teilen diese selbstständig (z. B. beim Versenden einer Rechnung per E-Mail).
+**Unsere Rolle (Auftragsverarbeiter):** 
+Wir stellen die technische Infrastruktur zur Verfügung und verarbeiten die von Ihnen eingegebenen Daten ausschließlich in Ihrem Auftrag (Art. 28 DSGVO), um Ihnen die Nutzung der App zu ermöglichen.
 
-## 2. Wie wir Ihre Daten verwenden
+## 2. Welche Daten wir sammeln und verarbeiten
 
-Wir verwenden die gesammelten Informationen ausschließlich für die Bereitstellung der App-Funktionen:
-*   Um Produkte und Inventar mit Bildern zu versehen.
-*   Um Rechnungen und Dokumente zu erstellen.
-*   Um die Funktionalität der App zu gewährleisten.
+### 2.1. Account-Daten
+Bei der Registrierung erfassen wir Ihre E-Mail-Adresse und ein verschlüsseltes Passwort bzw. nutzen Authentifizierungs-Daten von Drittanbietern (z.B. Google Sign-In), um Ihren Account abzusichern.
 
-## 3. Weitergabe von Daten an Dritte
+### 2.2. Eingegebene Geschäftsdaten (Cloud-Speicherung)
+Vendora ist eine cloud-basierte Anwendung. Alle Daten, die Sie in der App eingeben – einschließlich, aber nicht beschränkt auf:
+*   Produktdetails und Materialien
+*   Kundenstammdaten (Namen, E-Mail-Adressen, physische Adressen)
+*   Rechnungen und Ausgaben
+*   Unternehmensprofil (Ihre eigenen Firmen- und Steuerdaten)
 
-Vendora ist eine **Offline-First**-Anwendung. Wir verkaufen, handeln oder vermieten Ihre persönlichen Daten nicht an Dritte. Da die Daten lokal auf Ihrem Gerät gespeichert werden, haben wir als Entwickler keinen Zugriff auf Ihre gespeicherten Inhalte.
+werden sicher in unserer Cloud-Datenbank gespeichert. 
+**Hosting-Provider:** Wir nutzen die Dienste von **Supabase** (Infrastruktur bereitgestellt via Amazon Web Services - AWS). 
 
-## 4. Sicherheit
+### 2.3. Kamerazugriff und Bilder
+Unsere App benötigt Zugriff auf die Kamera Ihres Geräts, um Produktfotos oder Belege zu erfassen. Diese Bilder werden primär lokal verwaltet, können aber zur Synchronisation verschlüsselt in den Cloud-Speicher (Storage) übertragen werden.
 
-Wir setzen angemessene Sicherheitsmaßnahmen ein, um Ihre Daten auf Ihrem Gerät zu schützen (z. B. durch die Nutzung von sicheren Speicherbereichen des Betriebssystems). Bitte beachten Sie jedoch, dass keine Methode der Übertragung über das Internet oder der elektronischen Speicherung zu 100 % sicher ist.
+## 3. Sicherheit der Daten (Art. 32 DSGVO)
+Wir nehmen den Schutz Ihrer Daten ernst. Zur Sicherung der in der Cloud verarbeiteten Daten setzen wir folgende Mechanismen ein:
+*   **Verschlüsselung:** Datenübertragungen zwischen der App und unseren Servern sind per HTTPS/SSL verschlüsselt. Ruhende Daten in der Datenbank sind durch "Encryption at Rest" geschützt.
+*   **Zugriffskontrolle (Row Level Security):** Unsere Datenbanken sind streng durch Row Level Security (RLS) Richtlinien abgesichert. Dies stellt technisch sicher, dass Sie und nur Sie ausschließlich Zugriff auf Ihre eigenen Daten haben. Kein anderer Nutzer von Vendora kann Ihre Daten einsehen.
 
-## 5. Änderungen dieser Datenschutzerklärung
+## 4. Weitergabe von Daten an Dritte
+Wir verkaufen, handeln oder vermieten Ihre persönlichen Daten nicht an Dritte. Eine Weitergabe erfolgt ausschließlich an unsere streng geprüften Infrastruktur-Dienstleister (Supabase/AWS) im Rahmen der Auftragsverarbeitung, soweit dies für den Betrieb der App zwingend erforderlich ist.
 
-Wir können unsere Datenschutzerklärung von Zeit zu Zeit aktualisieren. Wir werden Sie über Änderungen informieren, indem wir die neue Datenschutzerklärung auf dieser Seite veröffentlichen.
+## 5. Ihre Rechte (Betroffenenrechte)
+Nach der DSGVO haben Sie bezüglich Ihrer eigenen Account-Daten jederzeit das Recht auf:
+*   **Auskunft (Art. 15):** Sie können alle in der Cloud gespeicherten Daten direkt in der App über die Export-Funktion (JSON/PDF) einsehen und herunterladen.
+*   **Berichtigung (Art. 16):** Sie können Ihre Daten jederzeit in der App direkt ändern.
+*   **Löschung (Art. 17):** In den Einstellungen der App finden Sie die Option **"Konto unwiderruflich löschen"**. Wenn Sie diese Funktion nutzen, wird Ihr Account mitsamt **allen** dazugehörigen und von Ihnen eingegebenen Daten (inkl. Kundendaten) dauerhaft und unwiderruflich von unseren Servern gelöscht.
 
 ## 6. Kontakt
-
-Wenn Sie Fragen zu dieser Datenschutzerklärung haben, kontaktieren Sie uns bitte unter:
-
-Digital Flow Solutions
-digitalflowsolutions2025@gmail.com
+Bei Fragen zum Datenschutz oder zur Ausübung Ihrer Rechte kontaktieren Sie uns unter der in Abschnitt 1 angegebenen E-Mail-Adresse.

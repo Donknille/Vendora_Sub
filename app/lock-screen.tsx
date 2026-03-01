@@ -8,6 +8,7 @@ import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
+import Checkbox from "expo-checkbox";
 
 if (Platform.OS !== "web") {
     WebBrowser.maybeCompleteAuthSession();
@@ -24,6 +25,7 @@ export default function LockScreen() {
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [mode, setMode] = useState<AuthMode>("login");
+    const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
     if (isAuthLoading) {
         return (
@@ -48,6 +50,11 @@ export default function LockScreen() {
 
         if (mode !== "forgotPassword" && !password) {
             Alert.alert("Fehler", "Bitte gib ein Passwort ein.");
+            return;
+        }
+
+        if (mode !== "forgotPassword" && !privacyAccepted) {
+            Alert.alert("Hinweis", "Bitte akzeptiere die Datenschutzerklärung, um fortzufahren.");
             return;
         }
 
@@ -80,6 +87,10 @@ export default function LockScreen() {
     };
 
     const handleGoogleAuth = async () => {
+        if (!privacyAccepted) {
+            Alert.alert("Hinweis", "Bitte akzeptiere die Datenschutzerklärung, um fortzufahren.");
+            return;
+        }
         setIsLoading(true);
         try {
             const redirectUrl = Linking.createURL('/auth/callback');
@@ -160,6 +171,27 @@ export default function LockScreen() {
                     </TouchableOpacity>
                 )}
 
+                {mode !== "forgotPassword" && (
+                    <View style={styles.privacyContainer}>
+                        <Checkbox
+                            value={privacyAccepted}
+                            onValueChange={setPrivacyAccepted}
+                            color={privacyAccepted ? theme.gold : undefined}
+                            style={styles.checkbox}
+                        />
+                        <View style={styles.privacyTextContainer}>
+                            <Text style={[styles.privacyLabel, { color: theme.textSecondary }]}>
+                                Ich akzeptiere die{" "}
+                            </Text>
+                            <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync('https://vendora.app/privacy')}>
+                                <Text style={[styles.privacyLabel, { color: theme.gold, textDecorationLine: "underline" }]}>
+                                    Datenschutzerklärung
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                )}
+
                 <TouchableOpacity
                     style={[styles.button, { backgroundColor: theme.gold, opacity: isLoading ? 0.7 : 1, marginBottom: 16 }]}
                     onPress={handleAuthAction}
@@ -216,5 +248,9 @@ const styles = StyleSheet.create({
     switchModeText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
     buttonText: { fontSize: 18, fontFamily: "Inter_600SemiBold" },
     forgotPasswordButton: { alignSelf: "flex-end", marginBottom: 24 },
-    forgotPasswordText: { fontSize: 14, fontFamily: "Inter_400Regular" }
+    forgotPasswordText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+    privacyContainer: { flexDirection: "row", alignItems: "center", marginBottom: 24, paddingHorizontal: 4 },
+    checkbox: { marginRight: 12, borderRadius: 4, width: 20, height: 20 },
+    privacyTextContainer: { flexDirection: "row", flexWrap: "wrap", flex: 1 },
+    privacyLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
 });

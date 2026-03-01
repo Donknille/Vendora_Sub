@@ -9,6 +9,7 @@ interface SubscriptionContextType {
     isSubscribed: boolean;
     isInTrial: boolean;
     canCreateNewItems: boolean;
+    daysUntilTrialEnds: number;
     customerInfo: CustomerInfo | null;
     currentOffering: PurchasesOffering | null;
     isLoading: boolean;
@@ -38,6 +39,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const userCreatedAt = new Date(user?.created_at || Date.now());
     const daysSinceCreation = (Date.now() - userCreatedAt.getTime()) / (1000 * 60 * 60 * 24);
     const isInTrial = daysSinceCreation <= 14;
+    const daysUntilTrialEnds = Math.max(0, Math.ceil(14 - daysSinceCreation));
 
     const canCreateNewItems = isSubscribed || isInTrial || demoSubscribed;
 
@@ -141,6 +143,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
                 isSubscribed,
                 isInTrial,
                 canCreateNewItems,
+                daysUntilTrialEnds,
                 customerInfo,
                 currentOffering,
                 isLoading,

@@ -34,13 +34,13 @@ function RootLayoutNav() {
 
   return (
     <Stack
-      screenOptions={{
-        headerBackTitle: "",
+      screenOptions={({ route }) => ({
+        headerBackTitle: "Zurück",
         headerStyle: { backgroundColor: theme.background },
         headerTintColor: theme.gold,
         headerTitleStyle: { fontFamily: "Inter_600SemiBold", color: theme.text },
         contentStyle: { backgroundColor: theme.background },
-      }}
+      })}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="paywall" options={{ presentation: "modal", headerShown: false }} />
