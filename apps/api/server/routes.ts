@@ -1,8 +1,11 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "node:http";
 import crypto from "crypto";
-import { users, orders, markets, expenses, order_items, market_sales } from "../shared/schema";
-import { eq } from "drizzle-orm";
+import {
+  users, orders, markets, expenses, order_items, market_sales,
+  insertOrderSchema, insertOrderItemSchema, insertMarketSchema, insertMarketSaleSchema, insertExpenseSchema
+} from "@vendora/shared";
+import { eq, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
@@ -122,27 +125,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/orders", requireSubscription, async (req, res) => {
     try {
       const userId = req.headers["x-user-id"] as string;
-      await db.insert(orders).values({ ...req.body, user_id: userId });
+      const validatedData = insertOrderSchema.parse({ ...req.body, user_id: userId });
+      await db.insert(orders).values(validatedData);
       res.status(201).json({ message: "Order created" });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      res.status(500).json({ error: "Failed to create order" });
+      res.status(e.name === "ZodError" ? 400 : 500).json({ error: e.errors || "Failed to create order" });
     }
   });
 
   app.put("/api/orders/:id", requireSubscription, async (req, res) => {
     try {
       const userId = req.headers["x-user-id"] as string;
-      await db.update(orders).set(req.body).where(eq(orders.id, req.params.id as string));
+      const validatedData = insertOrderSchema.partial().parse(req.body);
+      await db.update(orders).set(validatedData).where(and(eq(orders.id, req.params.id as string), eq(orders.user_id, userId)));
       res.json({ message: "Order updated" });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to update order" });
+    } catch (e: any) {
+      res.status(e.name === "ZodError" ? 400 : 500).json({ error: e.errors || "Failed to update order" });
     }
   });
 
   app.delete("/api/orders/:id", requireSubscription, async (req, res) => {
     try {
-      await db.delete(orders).where(eq(orders.id, req.params.id as string));
+      const userId = req.headers["x-user-id"] as string;
+      await db.delete(orders).where(and(eq(orders.id, req.params.id as string), eq(orders.user_id, userId)));
       res.json({ message: "Order deleted" });
     } catch (e) {
       res.status(500).json({ error: "Failed to delete order" });
@@ -163,10 +169,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/markets", requireSubscription, async (req, res) => {
     try {
       const userId = req.headers["x-user-id"] as string;
-      await db.insert(markets).values({ ...req.body, user_id: userId });
+      const validatedData = insertMarketSchema.parse({ ...req.body, user_id: userId });
+      await db.insert(markets).values(validatedData);
       res.status(201).json({ message: "Market created" });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to create market" });
+    } catch (e: any) {
+      res.status(e.name === "ZodError" ? 400 : 500).json({ error: e.errors || "Failed to create market" });
     }
   });
 
@@ -184,10 +191,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/expenses", requireSubscription, async (req, res) => {
     try {
       const userId = req.headers["x-user-id"] as string;
-      await db.insert(expenses).values({ ...req.body, user_id: userId });
+      const validatedData = insertExpenseSchema.parse({ ...req.body, user_id: userId });
+      await db.insert(expenses).values(validatedData);
       res.status(201).json({ message: "Expense created" });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to create expense" });
+    } catch (e: any) {
+      res.status(e.name === "ZodError" ? 400 : 500).json({ error: e.errors || "Failed to create expense" });
     }
   });
 
@@ -205,26 +213,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/order_items", requireSubscription, async (req, res) => {
     try {
       const userId = req.headers["x-user-id"] as string;
-      await db.insert(order_items).values({ ...req.body, user_id: userId });
+      const validatedData = insertOrderItemSchema.parse({ ...req.body, user_id: userId });
+      await db.insert(order_items).values(validatedData);
       res.status(201).json({ message: "Order item created" });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to create order item" });
+    } catch (e: any) {
+      res.status(e.name === "ZodError" ? 400 : 500).json({ error: e.errors || "Failed to create order item" });
     }
   });
 
   app.put("/api/order_items/:id", requireSubscription, async (req, res) => {
     try {
       const userId = req.headers["x-user-id"] as string;
-      await db.update(order_items).set(req.body).where(eq(order_items.id, req.params.id as string));
+      const validatedData = insertOrderItemSchema.partial().parse(req.body);
+      await db.update(order_items).set(validatedData).where(and(eq(order_items.id, req.params.id as string), eq(order_items.user_id, userId)));
       res.json({ message: "Order item updated" });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to update order item" });
+    } catch (e: any) {
+      res.status(e.name === "ZodError" ? 400 : 500).json({ error: e.errors || "Failed to update order item" });
     }
   });
 
   app.delete("/api/order_items/:id", requireSubscription, async (req, res) => {
     try {
-      await db.delete(order_items).where(eq(order_items.id, req.params.id as string));
+      const userId = req.headers["x-user-id"] as string;
+      await db.delete(order_items).where(and(eq(order_items.id, req.params.id as string), eq(order_items.user_id, userId)));
       res.json({ message: "Order item deleted" });
     } catch (e) {
       res.status(500).json({ error: "Failed to delete order item" });
@@ -245,26 +256,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/market_sales", requireSubscription, async (req, res) => {
     try {
       const userId = req.headers["x-user-id"] as string;
-      await db.insert(market_sales).values({ ...req.body, user_id: userId });
+      const validatedData = insertMarketSaleSchema.parse({ ...req.body, user_id: userId });
+      await db.insert(market_sales).values(validatedData);
       res.status(201).json({ message: "Market sale created" });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to create market sale" });
+    } catch (e: any) {
+      res.status(e.name === "ZodError" ? 400 : 500).json({ error: e.errors || "Failed to create market sale" });
     }
   });
 
   app.put("/api/market_sales/:id", requireSubscription, async (req, res) => {
     try {
       const userId = req.headers["x-user-id"] as string;
-      await db.update(market_sales).set(req.body).where(eq(market_sales.id, req.params.id as string));
+      const validatedData = insertMarketSaleSchema.partial().parse(req.body);
+      await db.update(market_sales).set(validatedData).where(and(eq(market_sales.id, req.params.id as string), eq(market_sales.user_id, userId)));
       res.json({ message: "Market sale updated" });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to update market sale" });
+    } catch (e: any) {
+      res.status(e.name === "ZodError" ? 400 : 500).json({ error: e.errors || "Failed to update market sale" });
     }
   });
 
   app.delete("/api/market_sales/:id", requireSubscription, async (req, res) => {
     try {
-      await db.delete(market_sales).where(eq(market_sales.id, req.params.id as string));
+      const userId = req.headers["x-user-id"] as string;
+      await db.delete(market_sales).where(and(eq(market_sales.id, req.params.id as string), eq(market_sales.user_id, userId)));
       res.json({ message: "Market sale deleted" });
     } catch (e) {
       res.status(500).json({ error: "Failed to delete market sale" });

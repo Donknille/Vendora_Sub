@@ -1,5 +1,25 @@
-import { fetch } from "expo/fetch";
-import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction, onlineManager, focusManager } from "@tanstack/react-query";
+import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import NetInfo from "@react-native-community/netinfo";
+import { AppState, type AppStateStatus } from "react-native";
+
+// Configure online manager to react to network changes
+onlineManager.setEventListener((setOnline) => {
+  return NetInfo.addEventListener((state) => {
+    setOnline(!!state.isConnected);
+  });
+});
+
+// Configure focus manager to react to app state (for auto-refetching)
+focusManager.setEventListener((handleFocus) => {
+  const subscription = AppState.addEventListener("change", (state: AppStateStatus) => {
+    handleFocus(state === "active");
+  });
+  return () => {
+    subscription.remove();
+  };
+});
 
 /**
  * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
@@ -47,6 +67,10 @@ export async function apiRequest(
   return res;
 }
 
+export const asyncStoragePersister = createAsyncStoragePersister({
+  storage: AsyncStorage,
+});
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
@@ -73,12 +97,13 @@ export const queryClient = new QueryClient({
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      refetchOnWindowFocus: true,
+      staleTime: 1000 * 60 * 5, // 5 minutes fresh
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours caching offline
+      retry: 2, // Retry failed network requests to handle spotty connections
     },
     mutations: {
-      retry: false,
+      retry: 2,
     },
   },
 });

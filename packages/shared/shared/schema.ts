@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,9 +7,9 @@ export const users = pgTable("users", {
   id: varchar("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  supabase_id: text("supabase_id").unique(),
-  email: text("email").notNull().unique(),
-  revenuecat_app_user_id: text("revenuecat_app_user_id").unique(),
+  supabase_id: text("supabase_id").unique("users_supabase_id_key"),
+  email: text("email").notNull().unique("users_email_key"),
+  revenuecat_app_user_id: text("revenuecat_app_user_id").unique("users_revenuecat_app_user_id_key"),
   subscription_status: text("subscription_status").default("active"), // e.g., active, past_due, canceled
   subscription_expires_at: text("subscription_expires_at"),
   created_at: text("created_at").default(sql`CURRENT_TIMESTAMP`),
@@ -49,6 +49,8 @@ export const order_items = pgTable("order_items", {
   name: text("name").notNull(),
   quantity: text("quantity").notNull(), // text to avoid precision issues in simple setup
   price: text("price").notNull(),
+  notes: text("notes"),
+  is_completed: boolean("is_completed").default(false),
 });
 
 export const markets = pgTable("markets", {
@@ -84,3 +86,10 @@ export const expenses = pgTable("expenses", {
   expense_date: text("expense_date"),
   created_at: text("created_at"),
 });
+
+// -- Zod Validation Schemas for API routes --
+export const insertOrderSchema = createInsertSchema(orders);
+export const insertOrderItemSchema = createInsertSchema(order_items);
+export const insertMarketSchema = createInsertSchema(markets);
+export const insertMarketSaleSchema = createInsertSchema(market_sales);
+export const insertExpenseSchema = createInsertSchema(expenses);

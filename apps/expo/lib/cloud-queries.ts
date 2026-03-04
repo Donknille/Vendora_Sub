@@ -109,6 +109,56 @@ export function useCreateOrderMutation() {
     });
 }
 
+export function useUpdateOrderMutation() {
+    const api = useCloudApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Partial<Order> }) => api.updateOrder(id, data),
+        onMutate: async ({ id, data }) => {
+            await queryClient.cancelQueries({ queryKey: ["orders"] });
+            const previousOrders = queryClient.getQueryData<Order[]>(["orders"]);
+            if (previousOrders) {
+                queryClient.setQueryData<Order[]>(["orders"], old =>
+                    old?.map(order => order.id === id ? { ...order, ...data } : order)
+                );
+            }
+            return { previousOrders };
+        },
+        onError: (err, newTodo, context) => {
+            if (context?.previousOrders) {
+                queryClient.setQueryData(["orders"], context.previousOrders);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["orders"] });
+        },
+    });
+}
+
+export function useDeleteOrderMutation() {
+    const api = useCloudApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: api.deleteOrder,
+        onMutate: async (id) => {
+            await queryClient.cancelQueries({ queryKey: ["orders"] });
+            const previousOrders = queryClient.getQueryData<Order[]>(["orders"]);
+            if (previousOrders) {
+                queryClient.setQueryData<Order[]>(["orders"], old => old?.filter(order => order.id !== id));
+            }
+            return { previousOrders };
+        },
+        onError: (err, newTodo, context) => {
+            if (context?.previousOrders) {
+                queryClient.setQueryData(["orders"], context.previousOrders);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: ["orders"] });
+        },
+    });
+}
+
 export function useMarketsQuery() {
     const api = useCloudApi();
     const { isAuthenticated } = useAuth();

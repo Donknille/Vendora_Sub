@@ -32,6 +32,8 @@ export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  notes?: string;
+  isCompleted?: boolean;
 }
 
 export interface MarketEvent {

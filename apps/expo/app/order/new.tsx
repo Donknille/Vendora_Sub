@@ -39,8 +39,8 @@ export default function NewOrderScreen() {
   const [serviceDate, setServiceDate] = useState(toISODate(new Date()));
   const [shippingCost, setShippingCost] = useState("");
   const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<{ id: string; name: string; quantity: number; priceText: string }[]>([
-    { id: "1", name: "", quantity: 1, priceText: "" },
+  const [items, setItems] = useState<{ id: string; name: string; quantity: number; priceText: string; notes: string }[]>([
+    { id: "1", name: "", quantity: 1, priceText: "", notes: "" },
   ]);
 
   useFocusEffect(
@@ -56,7 +56,7 @@ export default function NewOrderScreen() {
   const addItem = () => {
     setItems([
       ...items,
-      { id: Date.now().toString(), name: "", quantity: 1, priceText: "" },
+      { id: Date.now().toString(), name: "", quantity: 1, priceText: "", notes: "" },
     ]);
   };
 
@@ -68,6 +68,8 @@ export default function NewOrderScreen() {
       updated[index] = { ...updated[index], quantity: parseInt(value as string, 10) || 1 };
     } else if (field === "price") {
       updated[index] = { ...updated[index], priceText: value as string };
+    } else if (field === "notes") {
+      updated[index] = { ...updated[index], notes: value as string };
     }
     setItems(updated);
   };
@@ -92,6 +94,8 @@ export default function NewOrderScreen() {
       name: item.name.trim(),
       quantity: item.quantity,
       price: parseAmount(item.priceText),
+      notes: item.notes?.trim() || "",
+      isCompleted: false,
     }));
 
     await ordersStorage.add({
@@ -218,6 +222,13 @@ export default function NewOrderScreen() {
                   />
                 </View>
               </View>
+              <TextInput
+                style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border, marginTop: 4 }]}
+                value={item.notes}
+                onChangeText={(v) => updateItem(index, "notes", v)}
+                placeholder={t.orders.additionalNotes || "Notizen zum Artikel (optional)"}
+                placeholderTextColor={theme.textSecondary}
+              />
             </View>
           ))}
 

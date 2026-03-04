@@ -17,8 +17,9 @@ import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { ordersStorage, Order } from "@/lib/storage";
-import { router, useFocusEffect } from "expo-router";
+import { Order } from "@/lib/storage";
+import { router } from "expo-router";
+import { useOrdersQuery } from "@/lib/cloud-queries";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
@@ -27,24 +28,10 @@ export default function OrdersScreen() {
   const { t } = useLanguage();
   const { canCreateNewItems } = useSubscription();
   const insets = useSafeAreaInsets();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadOrders = useCallback(async () => {
-    const data = await ordersStorage.getAll();
-    setOrders(data);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadOrders();
-    }, [loadOrders]),
-  );
+  const { data: orders = [], refetch, isRefetching } = useOrdersQuery();
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    await loadOrders();
-    setRefreshing(false);
+    await refetch();
   };
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
@@ -112,7 +99,7 @@ export default function OrdersScreen() {
           orders.length === 0 && styles.emptyList,
           { paddingBottom: insets.bottom + 100 },
         ]}
-        refreshing={refreshing}
+        refreshing={isRefetching}
         onRefresh={onRefresh}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

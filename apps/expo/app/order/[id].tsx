@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,8 +17,9 @@ import { useLanguage } from "@/lib/LanguageContext";
 import { Card } from "@/components/Card";
 import { StatusBadge } from "@/components/StatusBadge";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { ordersStorage, Order, profileStorage } from "@/lib/storage";
-import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
+import { Order, profileStorage } from "@/lib/storage";
+import { useLocalSearchParams, router } from "expo-router";
+import { useOrdersQuery, useUpdateOrderMutation, useDeleteOrderMutation } from "@/lib/cloud-queries";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { confirmAction } from "@/lib/confirmAction";
@@ -32,29 +34,45 @@ export default function OrderDetailScreen() {
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-
-  const loadOrder = useCallback(async () => {
-    const orders = await ordersStorage.getAll();
-    const found = orders.find((o) => o.id === id);
-    setOrder(found || null);
-  }, [id]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadOrder();
-    }, [loadOrder]),
-  );
+  const { data: orders = [] } = useOrdersQuery();
+  const order = orders.find((o) => o.id === id) || null;
+  const updateOrder = useUpdateOrderMutation();
+  const deleteOrderMutation = useDeleteOrderMutation();
 
   const changeStatus = async (newStatus: Order["status"]) => {
     if (newStatus === order?.status) return;
     try {
-      await ordersStorage.update(id!, { status: newStatus });
+      await updateOrder.mutateAsync({ id: id!, data: { status: newStatus } });
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      loadOrder();
     } catch (e) {
       console.error("Failed to update status", e);
+    }
+  };
+
+  const toggleItemCompletion = async (itemId: string) => {
+    if (!order) return;
+    try {
+      const updatedItems = order.items.map(item =>
+        item.id === itemId ? { ...item, isCompleted: !item.isCompleted } : item
+      );
+      await updateOrder.mutateAsync({ id: id!, data: { items: updatedItems } });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e) {
+      console.error("Failed to toggle item completion", e);
+    }
+  };
+
+  const updateItemNotes = async (itemId: string, newNotes: string) => {
+    if (!order) return;
+    try {
+      const updatedItems = order.items.map(item =>
+        item.id === itemId ? { ...item, notes: newNotes } : item
+      );
+      // No mutate async await here for smooth typing, just trigger the optimistic update
+      updateOrder.mutate({ id: id!, data: { items: updatedItems } });
+    } catch (e) {
+      console.error("Failed to update item notes", e);
     }
   };
 
@@ -112,11 +130,14 @@ export default function OrderDetailScreen() {
       t.orders.cannotUndo,
       t.orders.deleteCancel,
       t.orders.deleteAction,
-      () => {
-        ordersStorage.delete(id!).then(() => {
+      async () => {
+        try {
+          await deleteOrderMutation.mutateAsync(id!);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           router.back();
-        });
+        } catch (e) {
+          Alert.alert("Error handling the request");
+        }
       },
     );
   };
@@ -187,22 +208,37 @@ export default function OrderDetailScreen() {
           <Card>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.orders.items}</Text>
             {order.items.map((item, i) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.itemRow,
-                  i < order.items.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.border },
-                ]}
-              >
-                <View style={styles.itemInfo}>
-                  <Text style={[styles.itemName, { color: theme.text }]}>{item.name}</Text>
-                  <Text style={[styles.itemQty, { color: theme.textSecondary }]}>
-                    {item.quantity} x {formatCurrency(item.price)}
+              <View key={item.id} style={{ marginBottom: i < order.items.length - 1 ? 16 : 0 }}>
+                <View style={[styles.itemRow, { paddingVertical: 8, borderBottomWidth: 0 }]}>
+                  <Pressable onPress={() => toggleItemCompletion(item.id)} style={{ paddingRight: 10 }}>
+                    <Ionicons
+                      name={item.isCompleted ? "checkmark-circle" : "ellipse-outline"}
+                      size={24}
+                      color={item.isCompleted ? theme.success : theme.textSecondary}
+                    />
+                  </Pressable>
+                  <View style={styles.itemInfo}>
+                    <Text style={[styles.itemName, { color: item.isCompleted ? theme.textSecondary : theme.text, textDecorationLine: item.isCompleted ? 'line-through' : 'none' }]}>{item.name}</Text>
+                    <Text style={[styles.itemQty, { color: theme.textSecondary }]}>
+                      {item.quantity} x {formatCurrency(item.price)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.itemTotal, { color: item.isCompleted ? theme.textSecondary : theme.text }]}>
+                    {formatCurrency(item.price * item.quantity)}
                   </Text>
                 </View>
-                <Text style={[styles.itemTotal, { color: theme.text }]}>
-                  {formatCurrency(item.price * item.quantity)}
-                </Text>
+                <TextInput
+                  style={[
+                    styles.itemNotesInput,
+                    { backgroundColor: theme.inputBg, color: theme.text, borderColor: theme.border }
+                  ]}
+                  value={item.notes || ""}
+                  onChangeText={(text) => updateItemNotes(item.id, text)}
+                  placeholder="Notizen zum Artikel..."
+                  placeholderTextColor={theme.textSecondary}
+                  multiline
+                />
+                {i < order.items.length - 1 && <View style={{ height: 1, backgroundColor: theme.border, marginTop: 16 }} />}
               </View>
             ))}
             <View style={[styles.totalRow, { borderTopColor: theme.border }]}>
@@ -325,4 +361,5 @@ const styles = StyleSheet.create({
   invoiceBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff" },
   deleteBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 16, borderRadius: 14, borderWidth: 1, marginTop: 8 },
   deleteBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  itemNotesInput: { borderRadius: 8, padding: 10, fontSize: 14, fontFamily: "Inter_400Regular", borderWidth: 1, marginTop: 4, minHeight: 40 },
 });
