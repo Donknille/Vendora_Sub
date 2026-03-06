@@ -3,6 +3,24 @@ import { supabase } from "./supabase";
 import { Session, User } from "@supabase/supabase-js";
 import { AppState } from "react-native";
 
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
+
+const syncUser = async (session: Session | null) => {
+    if (!session?.user) return;
+    try {
+        await fetch(`${API_BASE_URL}/users/sync`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-user-id': session.user.id,
+            },
+            body: JSON.stringify({ email: session.user.email }),
+        });
+    } catch (e) {
+        console.error("Failed to sync user", e);
+    }
+};
+
 interface AuthContextType {
     isAuthenticated: boolean;
     user: User | null;
@@ -32,6 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
+            if (session) {
+                syncUser(session);
+            }
             setIsLoading(false);
         });
 
@@ -40,6 +61,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             (_event, session) => {
                 setSession(session);
                 setUser(session?.user ?? null);
+                if (session) {
+                    syncUser(session);
+                }
                 setIsLoading(false);
             }
         );

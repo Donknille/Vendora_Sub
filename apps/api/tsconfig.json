@@ -10,7 +10,7 @@
         "baseUrl": ".",
         "paths": {
             "@vendora/shared": [
-                "../../packages/shared/schema.ts"
+                "../../packages/shared/shared/schema.ts"
             ]
         }
     },

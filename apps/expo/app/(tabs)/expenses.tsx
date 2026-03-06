@@ -19,12 +19,12 @@ import { useSubscription } from "@/lib/subscription";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { formatCurrency, parseAmount } from "@/lib/formatCurrency";
-import { expensesStorage, Expense } from "@/lib/storage";
 import { confirmAction } from "@/lib/confirmAction";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { DateInput } from "@/components/DateInput";
+import { useExpensesQuery, useCreateExpenseMutation, useDeleteExpenseMutation } from "@/lib/cloud-queries";
 
 function toISODate(d: Date): string {
   const y = d.getFullYear();
@@ -50,34 +50,24 @@ export default function ExpensesScreen() {
   const { t } = useLanguage();
   const { canCreateNewItems } = useSubscription();
   const insets = useSafeAreaInsets();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+
+  const { data: expenses = [], refetch, isRefetching } = useExpensesQuery();
+  const createExpense = useCreateExpenseMutation();
+  const deleteExpenseMutation = useDeleteExpenseMutation();
+
   const [showModal, setShowModal] = useState(false);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("Materials");
   const [expenseDate, setExpenseDate] = useState(toISODate(new Date()));
 
-  const loadExpenses = useCallback(async () => {
-    const data = await expensesStorage.getAll();
-    setExpenses(data);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadExpenses();
-    }, [loadExpenses]),
-  );
-
   const onRefresh = async () => {
-    setRefreshing(true);
-    await loadExpenses();
-    setRefreshing(false);
+    await refetch();
   };
 
   const addExpense = async () => {
     if (!description.trim() || !amount.trim()) return;
-    await expensesStorage.add({
+    await createExpense.mutateAsync({
       description: description.trim(),
       amount: parseAmount(amount),
       category,
@@ -90,20 +80,17 @@ export default function ExpensesScreen() {
     setCategory("Materials");
     setExpenseDate(toISODate(new Date()));
     setShowModal(false);
-    loadExpenses();
   };
 
-  const deleteExpense = (id: string) => {
+  const deleteExpenseAction = (id: string) => {
     confirmAction(
       t.expenses.deleteExpense,
       t.expenses.areYouSure,
       t.expenses.cancel,
       t.expenses.delete,
-      () => {
-        expensesStorage.delete(id).then(() => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          loadExpenses();
-        });
+      async () => {
+        await deleteExpenseMutation.mutateAsync(id);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       },
     );
   };
@@ -120,10 +107,10 @@ export default function ExpensesScreen() {
     return (t.expenses.categories as Record<string, string>)[cat] || cat;
   };
 
-  const renderExpense = ({ item, index }: { item: Expense; index: number }) => (
+  const renderExpense = ({ item, index }: { item: any; index: number }) => (
     <Animated.View entering={FadeInDown.duration(300).delay(index * 40)}>
       <Pressable
-        onLongPress={() => deleteExpense(item.id)}
+        onLongPress={() => deleteExpenseAction(item.id)}
         style={({ pressed }) => [pressed && { opacity: 0.8 }]}
       >
         <Card style={styles.expenseCard}>
@@ -206,7 +193,7 @@ export default function ExpensesScreen() {
           expenses.length === 0 && styles.emptyList,
           { paddingBottom: insets.bottom + 100 },
         ]}
-        refreshing={refreshing}
+        refreshing={isRefetching}
         onRefresh={onRefresh}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

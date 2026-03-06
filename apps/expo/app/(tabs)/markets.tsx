@@ -15,50 +15,38 @@ import { useSubscription } from "@/lib/subscription";
 import { Card } from "@/components/Card";
 import { EmptyState } from "@/components/EmptyState";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { marketsStorage, marketSalesStorage, MarketEvent, MarketSale } from "@/lib/storage";
 import { router, useFocusEffect } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useMarketsQuery, useMarketSalesQuery } from "@/lib/cloud-queries";
+
 
 export default function MarketsScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
   const { canCreateNewItems } = useSubscription();
   const insets = useSafeAreaInsets();
-  const [markets, setMarkets] = useState<MarketEvent[]>([]);
-  const [salesMap, setSalesMap] = useState<Record<string, MarketSale[]>>({});
-  const [refreshing, setRefreshing] = useState(false);
+  const { data: markets = [], refetch: refetchMarkets, isRefetching: isRefetchingMarkets } = useMarketsQuery();
+  const { data: allSales = [], refetch: refetchSales, isRefetching: isRefetchingSales } = useMarketSalesQuery();
 
-  const loadData = useCallback(async () => {
-    const mkts = await marketsStorage.getAll();
-    setMarkets(mkts);
-    const allSales = await marketSalesStorage.getAll();
-    const map: Record<string, MarketSale[]> = {};
-    for (const sale of allSales) {
-      if (!map[sale.marketId]) map[sale.marketId] = [];
-      map[sale.marketId].push(sale);
-    }
-    setSalesMap(map);
-  }, []);
+  const isRefetching = isRefetchingMarkets || isRefetchingSales;
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData]),
-  );
+  const salesMap = allSales.reduce((acc: Record<string, any[]>, sale) => {
+    if (!acc[sale.market_id]) acc[sale.market_id] = [];
+    acc[sale.market_id].push(sale);
+    return acc;
+  }, {});
 
   const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
+    await Promise.all([refetchMarkets(), refetchSales()]);
   };
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
-  const renderMarket = ({ item, index }: { item: MarketEvent; index: number }) => {
+  const renderMarket = ({ item, index }: { item: any; index: number }) => {
     const sales = salesMap[item.id] || [];
-    const totalSales = sales.reduce((sum, s) => sum + s.amount * s.quantity, 0);
-    const totalCosts = item.standFee + item.travelCost;
+    const totalSales = sales.reduce((sum: number, s: any) => sum + s.amount * s.quantity, 0);
+    const totalCosts = (item.stand_fee || 0) + (item.travel_cost || 0);
     const profit = totalSales - totalCosts;
 
     return (
@@ -138,7 +126,7 @@ export default function MarketsScreen() {
           markets.length === 0 && styles.emptyList,
           { paddingBottom: insets.bottom + 100 },
         ]}
-        refreshing={refreshing}
+        refreshing={isRefetching}
         onRefresh={onRefresh}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

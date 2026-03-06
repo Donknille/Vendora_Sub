@@ -15,50 +15,46 @@ import { useTheme } from "@/lib/useTheme";
 import { useLanguage } from "@/lib/LanguageContext";
 import { Card } from "@/components/Card";
 import { formatCurrency, parseAmount } from "@/lib/formatCurrency";
-import {
-  marketsStorage,
-  marketSalesStorage,
-  MarketEvent,
-  MarketSale,
-} from "@/lib/storage";
-import { useLocalSearchParams, router, useFocusEffect } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { confirmAction } from "@/lib/confirmAction";
+import {
+  useMarketsQuery,
+  useMarketSalesQuery,
+  useUpdateMarketMutation,
+  useCreateMarketMutation,
+  useDeleteMarketMutation,
+  useCreateMarketSaleMutation,
+  useDeleteMarketSaleMutation
+} from "@/lib/cloud-queries";
 
 export default function MarketDetailScreen() {
   const theme = useTheme();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [market, setMarket] = useState<MarketEvent | null>(null);
-  const [sales, setSales] = useState<MarketSale[]>([]);
+  const { data: markets = [] } = useMarketsQuery();
+  const { data: allSales = [] } = useMarketSalesQuery();
+
   const [showQuickSale, setShowQuickSale] = useState(false);
   const [saleDesc, setSaleDesc] = useState("");
   const [saleAmount, setSaleAmount] = useState("");
   const [saleQty, setSaleQty] = useState("1");
 
-  const loadData = useCallback(async () => {
-    const allMarkets = await marketsStorage.getAll();
-    const found = allMarkets.find((m) => m.id === id);
-    setMarket(found || null);
-    if (id) {
-      const mSales = await marketSalesStorage.getByMarket(id);
-      setSales(mSales);
-    }
-  }, [id]);
+  const updateMarket = useUpdateMarketMutation();
+  const createMarket = useCreateMarketMutation();
+  const deleteMarketMutation = useDeleteMarketMutation();
+  const createSale = useCreateMarketSaleMutation();
+  const deleteSaleMutation = useDeleteMarketSaleMutation();
 
-  useFocusEffect(
-    useCallback(() => {
-      loadData();
-    }, [loadData]),
-  );
+  const market = markets.find(m => m.id === id) || null;
+  const sales = allSales.filter(s => s.market_id === id);
 
   const toggleMarketStatus = async () => {
     if (!market) return;
     const newStatus = market.status === "closed" ? "open" : "closed";
-    await marketsStorage.update(market.id, { status: newStatus });
-    setMarket({ ...market, status: newStatus });
+    await updateMarket.mutateAsync({ id: market.id, data: { status: newStatus } });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
@@ -70,27 +66,33 @@ export default function MarketDetailScreen() {
       "Abbrechen",
       "Kopieren",
       async () => {
-        const newMarket = await marketsStorage.add({
+        const newMarketData = {
           name: `${market.name} (Kopie)`,
           date: new Date().toISOString(),
           location: "",
           standFee: 0,
           travelCost: 0,
           notes: "",
-          status: "open",
+          status: "open" as const,
           quickItems: market.quickItems ? [...market.quickItems] : [],
-        });
+        };
+        const createResult = await createMarket.mutateAsync(newMarketData);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Replace current screen with the new market to avoid huge nav stacks or pushing over existing context
-        router.replace({ pathname: "/market/[id]", params: { id: newMarket.id } });
+        // Da die ID vom Backend erst vergeben wird, müssen wir hoffen, dass das Return-Objekt sie enthält
+        // Falls nicht, routen wir zurück zur Übersicht. Idealerweise geben wir die id zurück.
+        if (createResult && createResult.id) {
+          router.replace({ pathname: "/market/[id]", params: { id: createResult.id } });
+        } else {
+          router.back();
+        }
       }
     );
   };
 
   const addSale = async () => {
     if (!saleDesc.trim() || !saleAmount.trim()) return;
-    await marketSalesStorage.add({
-      marketId: id!,
+    await createSale.mutateAsync({
+      market_id: id!,
       description: saleDesc.trim(),
       amount: parseAmount(saleAmount),
       quantity: parseInt(saleQty, 10) || 1,
@@ -100,60 +102,52 @@ export default function MarketDetailScreen() {
     setSaleAmount("");
     setSaleQty("1");
     setShowQuickSale(false);
-    loadData();
   };
 
   const addQuickItemSale = async (name: string, price: number) => {
-    await marketSalesStorage.add({
-      marketId: id!,
+    await createSale.mutateAsync({
+      market_id: id!,
       description: name,
       amount: price,
       quantity: 1,
     });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    loadData();
   };
 
   const removeLastQuickItemSale = async (name: string, price: number) => {
-    // Find the most recent sale with matching description and price
     const saleToRemove = sales.find(s => s.description === name && s.amount === price);
     if (saleToRemove) {
-      await marketSalesStorage.delete(saleToRemove.id);
+      await deleteSaleMutation.mutateAsync(saleToRemove.id);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      loadData();
     }
   };
 
-  const deleteSale = (saleId: string) => {
+  const deleteSaleAction = (saleId: string) => {
     if (market?.status === "closed") return;
     confirmAction(
       t.markets.deleteSale,
       t.markets.removeSale,
       t.markets.deleteCancel,
       t.markets.deleteAction,
-      () => {
-        marketSalesStorage.delete(saleId).then(() => {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          loadData();
-        });
+      async () => {
+        await deleteSaleMutation.mutateAsync(saleId);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       },
     );
   };
 
-  const deleteMarket = () => {
+  const confirmDeleteMarket = () => {
     confirmAction(
       t.markets.deleteMarket,
       t.markets.deleteMarketConfirm,
       t.markets.deleteCancel,
       t.markets.deleteAction,
-      () => {
-        marketsStorage.delete(id!).then(() => {
-          const deletePromises = sales.map((sale) => marketSalesStorage.delete(sale.id));
-          Promise.all(deletePromises).then(() => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.back();
-          });
-        });
+      async () => {
+        const deletePromises = sales.map((sale) => deleteSaleMutation.mutateAsync(sale.id));
+        await Promise.all(deletePromises);
+        await deleteMarketMutation.mutateAsync(id!);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.back();
       },
     );
   };
@@ -170,8 +164,10 @@ export default function MarketDetailScreen() {
 
   const isClosed = market.status === "closed";
   const totalSales = sales.reduce((sum, s) => sum + s.amount * s.quantity, 0);
-  const totalCosts = market.standFee + market.travelCost;
+  const totalCosts = (market.standFee || 0) + (market.travelCost || 0);
   const profit = totalSales - totalCosts;
+
+  type SaleGroup = { description: string; amount: number; quantity: number; ids: string[] };
 
   // Group sales by description and price
   const groupedSales = sales.reduce((acc, sale) => {
@@ -187,11 +183,11 @@ export default function MarketDetailScreen() {
     acc[key].quantity += sale.quantity;
     acc[key].ids.push(sale.id);
     return acc;
-  }, {} as Record<string, { description: string; amount: number; quantity: number; ids: string[] }>);
+  }, {} as Record<string, SaleGroup>);
 
-  const sortedGroups = Object.values(groupedSales).sort((a, b) => a.description.localeCompare(b.description));
+  const sortedGroups = (Object.values(groupedSales) as SaleGroup[]).sort((a, b) => a.description.localeCompare(b.description));
 
-  const deleteGroup = (group: typeof sortedGroups[0]) => {
+  const deleteGroup = (group: SaleGroup) => {
     if (market?.status === "closed") return;
     confirmAction(
       t.markets.deleteSale,
@@ -199,10 +195,9 @@ export default function MarketDetailScreen() {
       t.markets.deleteCancel,
       t.markets.deleteAction,
       async () => {
-        const promises = group.ids.map(id => marketSalesStorage.delete(id));
+        const promises = group.ids.map((groupSaleId: string) => deleteSaleMutation.mutateAsync(groupSaleId));
         await Promise.all(promises);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        loadData();
       },
     );
   };
@@ -270,20 +265,20 @@ export default function MarketDetailScreen() {
           </Card>
         </Animated.View>
 
-        {(market.standFee > 0 || market.travelCost > 0) && (
+        {((market.standFee || 0) > 0 || (market.travelCost || 0) > 0) && (
           <Animated.View entering={FadeInDown.duration(400).delay(150)}>
             <Card>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>{t.markets.costBreakdown}</Text>
               <View style={styles.costRow}>
                 <Text style={[styles.costLabel, { color: theme.textSecondary }]}>{t.markets.standFee}</Text>
                 <Text style={[styles.costValue, { color: theme.text }]}>
-                  {formatCurrency(market.standFee)}
+                  {formatCurrency(market.standFee || 0)}
                 </Text>
               </View>
               <View style={styles.costRow}>
                 <Text style={[styles.costLabel, { color: theme.textSecondary }]}>{t.markets.travel}</Text>
                 <Text style={[styles.costValue, { color: theme.text }]}>
-                  {formatCurrency(market.travelCost)}
+                  {formatCurrency(market.travelCost || 0)}
                 </Text>
               </View>
             </Card>
@@ -322,7 +317,7 @@ export default function MarketDetailScreen() {
               <View style={{ marginBottom: 16 }}>
                 <Text style={[styles.sectionTitle, { color: theme.text, fontSize: 13, marginBottom: 8 }]}>Schnellwahl</Text>
                 <View style={{ gap: 10 }}>
-                  {market.quickItems.map((item, idx) => {
+                  {market.quickItems.map((item: any, idx: number) => {
                     // Calculate count for this item
                     const count = sales.filter(s => s.description === item.name && s.amount === item.price).length;
 
@@ -452,7 +447,7 @@ export default function MarketDetailScreen() {
         </Animated.View>
 
         <Pressable
-          onPress={deleteMarket}
+          onPress={confirmDeleteMarket}
           style={({ pressed }) => [
             styles.deleteBtn,
             { borderColor: theme.error },

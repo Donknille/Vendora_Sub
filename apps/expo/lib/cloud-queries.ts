@@ -60,11 +60,40 @@ export const useCloudApi = () => {
         fetchMarkets: async (): Promise<MarketEvent[]> => {
             const res = await secureApiFetch(`${API_BASE_URL}/markets`, { headers: authHeaders });
             if (!res.ok) throw new Error("Failed to fetch markets");
-            return res.json();
+            const data = await res.json();
+            return data.map((m: any) => ({
+                ...m,
+                standFee: m.stand_fee,
+                travelCost: m.travel_cost,
+                quickItems: m.quick_items,
+            }));
         },
         createMarket: async (market: Partial<MarketEvent>) => {
-            const res = await secureApiFetch(`${API_BASE_URL}/markets`, { method: "POST", headers: authHeaders, body: JSON.stringify(market) });
+            const payload = {
+                ...market,
+                stand_fee: market.standFee,
+                travel_cost: market.travelCost,
+                quick_items: market.quickItems,
+            };
+            const res = await secureApiFetch(`${API_BASE_URL}/markets`, { method: "POST", headers: authHeaders, body: JSON.stringify(payload) });
             if (!res.ok) throw new Error("Failed to create market");
+            const m = await res.json();
+            return { ...m, standFee: m.stand_fee, travelCost: m.travel_cost, quickItems: m.quick_items } as MarketEvent;
+        },
+        updateMarket: async (id: string, market: Partial<MarketEvent>) => {
+            const payload = {
+                ...market,
+                ...(market.standFee !== undefined && { stand_fee: market.standFee }),
+                ...(market.travelCost !== undefined && { travel_cost: market.travelCost }),
+                ...(market.quickItems !== undefined && { quick_items: market.quickItems }),
+            };
+            const res = await secureApiFetch(`${API_BASE_URL}/markets/${id}`, { method: "PUT", headers: authHeaders, body: JSON.stringify(payload) });
+            if (!res.ok) throw new Error("Failed to update market");
+            return res.json();
+        },
+        deleteMarket: async (id: string) => {
+            const res = await secureApiFetch(`${API_BASE_URL}/markets/${id}`, { method: "DELETE", headers: authHeaders });
+            if (!res.ok) throw new Error("Failed to delete market");
             return res.json();
         },
 
@@ -72,11 +101,33 @@ export const useCloudApi = () => {
         fetchMarketSales: async (): Promise<any[]> => {
             const res = await secureApiFetch(`${API_BASE_URL}/market_sales`, { headers: authHeaders });
             if (!res.ok) throw new Error("Failed to fetch market sales");
-            return res.json();
+            const data = await res.json();
+            return data.map((s: any) => ({
+                ...s,
+                marketId: s.market_id,
+            }));
         },
         createMarketSale: async (sale: any) => {
-            const res = await secureApiFetch(`${API_BASE_URL}/market_sales`, { method: "POST", headers: authHeaders, body: JSON.stringify(sale) });
+            const payload = {
+                ...sale,
+                market_id: sale.marketId,
+            };
+            const res = await secureApiFetch(`${API_BASE_URL}/market_sales`, { method: "POST", headers: authHeaders, body: JSON.stringify(payload) });
             if (!res.ok) throw new Error("Failed to create market sale");
+            return res.json();
+        },
+        updateMarketSale: async (id: string, sale: any) => {
+            const payload = {
+                ...sale,
+                ...(sale.marketId && { market_id: sale.marketId }),
+            };
+            const res = await secureApiFetch(`${API_BASE_URL}/market_sales/${id}`, { method: "PUT", headers: authHeaders, body: JSON.stringify(payload) });
+            if (!res.ok) throw new Error("Failed to update market sale");
+            return res.json();
+        },
+        deleteMarketSale: async (id: string) => {
+            const res = await secureApiFetch(`${API_BASE_URL}/market_sales/${id}`, { method: "DELETE", headers: authHeaders });
+            if (!res.ok) throw new Error("Failed to delete market sale");
             return res.json();
         },
 
@@ -84,11 +135,34 @@ export const useCloudApi = () => {
         fetchExpenses: async (): Promise<Expense[]> => {
             const res = await secureApiFetch(`${API_BASE_URL}/expenses`, { headers: authHeaders });
             if (!res.ok) throw new Error("Failed to fetch expenses");
-            return res.json();
+            const data = await res.json();
+            return data.map((e: any) => ({
+                ...e,
+                expenseDate: e.expense_date,
+            }));
         },
         createExpense: async (expense: Partial<Expense>) => {
-            const res = await secureApiFetch(`${API_BASE_URL}/expenses`, { method: "POST", headers: authHeaders, body: JSON.stringify(expense) });
+            const payload = {
+                ...expense,
+                expense_date: expense.expenseDate,
+            };
+            const res = await secureApiFetch(`${API_BASE_URL}/expenses`, { method: "POST", headers: authHeaders, body: JSON.stringify(payload) });
             if (!res.ok) throw new Error("Failed to create expense");
+            const e = await res.json();
+            return { ...e, expenseDate: e.expense_date } as Expense;
+        },
+        updateExpense: async (id: string, expense: Partial<Expense>) => {
+            const payload = {
+                ...expense,
+                ...(expense.expenseDate !== undefined && { expense_date: expense.expenseDate }),
+            };
+            const res = await secureApiFetch(`${API_BASE_URL}/expenses/${id}`, { method: "PUT", headers: authHeaders, body: JSON.stringify(payload) });
+            if (!res.ok) throw new Error("Failed to update expense");
+            return res.json();
+        },
+        deleteExpense: async (id: string) => {
+            const res = await secureApiFetch(`${API_BASE_URL}/expenses/${id}`, { method: "DELETE", headers: authHeaders });
+            if (!res.ok) throw new Error("Failed to delete expense");
             return res.json();
         },
     };
@@ -174,6 +248,24 @@ export function useCreateMarketMutation() {
     });
 }
 
+export function useUpdateMarketMutation() {
+    const api = useCloudApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Partial<MarketEvent> }) => api.updateMarket(id, data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["markets"] }),
+    });
+}
+
+export function useDeleteMarketMutation() {
+    const api = useCloudApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: api.deleteMarket,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["markets"] }),
+    });
+}
+
 export function useExpensesQuery() {
     const api = useCloudApi();
     const { isAuthenticated } = useAuth();
@@ -189,6 +281,24 @@ export function useCreateExpenseMutation() {
     });
 }
 
+export function useUpdateExpenseMutation() {
+    const api = useCloudApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Partial<Expense> }) => api.updateExpense(id, data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["expenses"] }),
+    });
+}
+
+export function useDeleteExpenseMutation() {
+    const api = useCloudApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: api.deleteExpense,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["expenses"] }),
+    });
+}
+
 export function useOrderItemsQuery() {
     const api = useCloudApi();
     const { isAuthenticated } = useAuth();
@@ -199,4 +309,22 @@ export function useMarketSalesQuery() {
     const api = useCloudApi();
     const { isAuthenticated } = useAuth();
     return useQuery({ queryKey: ["market_sales"], queryFn: api.fetchMarketSales, enabled: isAuthenticated });
+}
+
+export function useCreateMarketSaleMutation() {
+    const api = useCloudApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: api.createMarketSale,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["market_sales"] }),
+    });
+}
+
+export function useDeleteMarketSaleMutation() {
+    const api = useCloudApi();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: api.deleteMarketSale,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["market_sales"] }),
+    });
 }

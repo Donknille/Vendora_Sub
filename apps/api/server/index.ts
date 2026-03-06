@@ -4,8 +4,20 @@ import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
 
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
+import { logger } from "./logger";
+
+Sentry.init({
+  dsn: process.env.VITE_SENTRY_DSN || process.env.EXPO_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN || "",
+  integrations: [
+    nodeProfilingIntegration(),
+  ],
+  tracesSampleRate: 1.0,
+  profilesSampleRate: 1.0,
+});
+
 const app = express();
-const log = console.log;
 
 declare module "http" {
   interface IncomingMessage {
@@ -90,7 +102,7 @@ function setupRequestLogging(app: express.Application) {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      logger.info(logLine);
     });
 
     next();
@@ -148,8 +160,8 @@ function serveLandingPage({
   const baseUrl = `${protocol}://${host}`;
   const expsUrl = `${host}`;
 
-  log(`baseUrl`, baseUrl);
-  log(`expsUrl`, expsUrl);
+  logger.info(`baseUrl: ${baseUrl}`);
+  logger.info(`expsUrl: ${expsUrl}`);
 
   const html = landingPageTemplate
     .replace(/BASE_URL_PLACEHOLDER/g, baseUrl)
@@ -170,7 +182,7 @@ function configureExpoAndLanding(app: express.Application) {
   const landingPageTemplate = fs.readFileSync(templatePath, "utf-8");
   const appName = getAppName();
 
-  log("Serving static Expo files with dynamic manifest routing");
+  logger.info("Serving static Expo files with dynamic manifest routing");
 
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api")) {
@@ -201,7 +213,7 @@ function configureExpoAndLanding(app: express.Application) {
   app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
   app.use(express.static(path.resolve(process.cwd(), "static-build")));
 
-  log("Expo routing: Checking expo-platform header on / and /manifest");
+  logger.info("Expo routing: Checking expo-platform header on / and /manifest");
 }
 
 function setupErrorHandler(app: express.Application) {
@@ -215,7 +227,7 @@ function setupErrorHandler(app: express.Application) {
     const status = error.status || error.statusCode || 500;
     const message = error.message || "Internal Server Error";
 
-    console.error("Internal Server Error:", err);
+    logger.error({ err, message }, "Internal Server Error");
 
     if (res.headersSent) {
       return next(err);
@@ -234,6 +246,8 @@ function setupErrorHandler(app: express.Application) {
 
   const server = await registerRoutes(app);
 
+  Sentry.setupExpressErrorHandler(app);
+
   setupErrorHandler(app);
 
   const port = parseInt(process.env.PORT || "5000", 10);
@@ -243,7 +257,7 @@ function setupErrorHandler(app: express.Application) {
       host: "0.0.0.0",
     },
     () => {
-      log(`express server serving on port ${port}`);
+      logger.info(`express server serving on port ${port}`);
     },
   );
 })();

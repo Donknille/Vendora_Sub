@@ -38,7 +38,16 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "vendora-expo",
+          "organization": "vendora"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

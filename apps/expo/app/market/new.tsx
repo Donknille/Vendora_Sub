@@ -14,10 +14,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@/lib/useTheme";
 import { useLanguage } from "@/lib/LanguageContext";
-import { marketsStorage } from "@/lib/storage";
 import { parseAmount } from "@/lib/formatCurrency";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useCreateMarketMutation } from "@/lib/cloud-queries";
 
 export default function NewMarketScreen() {
   const theme = useTheme();
@@ -30,6 +30,7 @@ export default function NewMarketScreen() {
   const [travelCost, setTravelCost] = useState("");
   const [notes, setNotes] = useState("");
   const [quickItems, setQuickItems] = useState<{ name: string; priceText: string }[]>([{ name: "", priceText: "" }]);
+  const createMarket = useCreateMarketMutation();
 
   const addQuickItem = () => {
     setQuickItems([...quickItems, { name: "", priceText: "" }]);
@@ -60,15 +61,18 @@ export default function NewMarketScreen() {
       .filter(i => i.name.trim() && i.priceText.trim())
       .map(i => ({ name: i.name.trim(), price: parseAmount(i.priceText) }));
 
-    await marketsStorage.add({
+    const newMarketData = {
       name: name.trim(),
       date,
       location: location.trim(),
       standFee: parseAmount(standFee),
       travelCost: parseAmount(travelCost),
       notes: notes.trim(),
+      status: "open" as const,
       quickItems: validQuickItems,
-    });
+    };
+
+    await createMarket.mutateAsync(newMarketData);
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     router.back();
